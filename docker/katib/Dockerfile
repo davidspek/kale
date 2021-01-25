@@ -14,6 +14,6 @@
 
 # Use tensorflow-1.14.0 as a base image, allowing the user to
 # speficy if they want GPU support, by setting IMAGE_TYPE to "gpu".
-FROM python:3.6
+FROM python:3.9.1
 
 RUN pip3 install --upgrade kubeflow-kale
