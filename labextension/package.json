@@ -63,7 +63,7 @@
     "@types/react-dom": "^16.9.0",
     "js-yaml": "^3.14.0",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react-dom": "^16.13.0",
     "react-sanitized-html": "^2.0.0",
     "use-debounce": "^3.0.1"
   },
