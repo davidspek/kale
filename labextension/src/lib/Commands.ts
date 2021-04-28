@@ -20,6 +20,7 @@ import {
   _legacy_executeRpc,
   _legacy_executeRpcAndShowRPCError,
   RPCError,
+  IRPCError,
 } from './RPCUtils';
 import { wait } from './Utils';
 import {
@@ -37,6 +38,7 @@ import {
 } from '../widgets/VolumesPanel';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import CellUtils from './CellUtils';
+import * as React from 'react';
 
 enum RUN_CELL_STATUS {
   OK = 'ok',
@@ -74,6 +76,8 @@ interface IKatibRunArgs {
 }
 
 export default class Commands {
+  rokError: IRPCError;
+  snapshotError: IRPCError;
   private readonly _notebook: NotebookPanel;
   private readonly _kernel: Kernel.IKernelConnection;
 
@@ -90,6 +94,14 @@ export default class Commands {
     );
   };
 
+  genericsnapshotNotebook = async () => {
+    return await _legacy_executeRpcAndShowRPCError(
+      this._notebook,
+      this._kernel,
+      'snapshot.snapshot_notebook',
+    );
+  };
+
   getSnapshotProgress = async (task_id: string, ms?: number) => {
     const task = await _legacy_executeRpcAndShowRPCError(
       this._notebook,
@@ -103,6 +115,21 @@ export default class Commands {
       await wait(ms);
     }
     return task;
+  };
+
+  genericGetSnapshotStatus = async (snapshot_name: string, ms?: number) => {
+    const isReady = await _legacy_executeRpcAndShowRPCError(
+      this._notebook,
+      this._kernel,
+      'snapshot.check_snapshot_status',
+      {
+        snapshot_name,
+      },
+    );
+    if (ms) {
+      await wait(ms);
+    }
+    return isReady;
   };
 
   runSnapshotProcedure = async (onUpdate: Function) => {
@@ -131,6 +158,29 @@ export default class Commands {
     return null;
   };
 
+  runGenericSnapshotProcedure = async (onUpdate: Function) => {
+    const showSnapshotProgress = true;
+    const snapshot = await this.genericsnapshotNotebook();
+    let snapshot_names = snapshot;
+    for (let i of snapshot_names) {
+      let isReady = await this.genericGetSnapshotStatus(i);
+      onUpdate({ isReady, showSnapshotProgress });
+      while ((isReady = false)) {
+        isReady = await this.genericGetSnapshotStatus(i, 1000);
+        onUpdate({ isReady });
+      }
+      if ((isReady = true)) {
+        console.log('Snapshotting successful!');
+        return isReady;
+      } else if ((isReady = false)) {
+        console.error('Snapshot not ready');
+        console.error('Stopping the deployment...');
+      }
+    }
+
+    return null;
+  };
+
   replaceClonedVolumes = async (
     bucket: string,
     obj: string,
@@ -145,6 +195,17 @@ export default class Commands {
         bucket,
         obj,
         version,
+        volumes,
+      },
+    );
+  };
+
+  replaceGenericClonedVolumes = async (volumes: IVolumeMetadata[]) => {
+    return await _legacy_executeRpcAndShowRPCError(
+      this._notebook,
+      this._kernel,
+      'snapshot.replace_cloned_volumes',
+      {
         volumes,
       },
     );
